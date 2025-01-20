@@ -1,9 +1,10 @@
 use chrono::prelude::*;
 use disfunction::{run, Request};
 
-fn main() {
+#[tokio::main]
+async fn main() {
     if let Some(req) = Request::build() {
-        run(req);
+        run(req).await;
         return;
     }
 
