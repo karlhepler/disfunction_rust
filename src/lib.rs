@@ -13,13 +13,29 @@ pub struct Error {
     pub err: Box<dyn std::error::Error>,
 }
 
-pub async fn run(req: Request) -> Option<Error> {
-    println!("Hello, world! {:#?}", req);
+pub enum Response {
+    Out(String),
+    Err(String),
+    Log(String),
+}
+
+pub trait Responder {
+    fn send(&self, res: Response);
+}
+
+pub async fn run<T: Responder>(req: Request, res: T) {
+    res.send(Response::Out(format!("Hello, world! {:#?}", req)));
 
     let octocrab = octocrab::instance().user_access_token(req.token);
     let octocrab = match octocrab {
         Ok(octocrab) => octocrab,
-        Err(err) => return Some(Error { err: Box::new(err) }),
+        Err(err) => {
+            res.send(Response::Log(err.to_string()));
+            res.send(Response::Err(
+                "error initializing GitHub client".to_string(),
+            ));
+            return;
+        }
     };
 
     let repos = octocrab
@@ -27,12 +43,18 @@ pub async fn run(req: Request) -> Option<Error> {
         .list_repos_for_authenticated_user()
         .send()
         .await;
-    let repos = match repos {
+    let _ = match repos {
         Ok(repos) => repos,
-        Err(err) => return Some(Error { err: Box::new(err) }),
+        Err(err) => {
+            res.send(Response::Log(err.to_string()));
+            res.send(Response::Err(
+                "error listing repos for authenticated user".to_string(),
+            ));
+            return;
+        }
     };
 
-    eprintln!("{:#?}", repos);
+    // res.send(Response::Out(format!("{:#?}", repos)))
 
     // repos.items.into_iter().
 
@@ -40,8 +62,6 @@ pub async fn run(req: Request) -> Option<Error> {
     //     .commits("karlhepler", "disfunction")
     //     .list(req.since, req.until)
     //     .collect();
-
-    None
 }
 
 // trait ListCommits<'octo> {
