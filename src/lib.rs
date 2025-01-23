@@ -13,11 +13,6 @@ pub struct Request {
     pub until: DateTime<Utc>,
 }
 
-#[derive(Debug)]
-pub struct Error {
-    pub err: Box<dyn std::error::Error>,
-}
-
 pub enum Response {
     Out(String),
     Err(String),
