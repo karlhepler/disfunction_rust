@@ -38,12 +38,14 @@ pub async fn run<T: Responder>(req: Request, res: T) {
         }
     };
 
+    // TODO(kjh): async pagination with smart rate limiting
     let repos = octocrab
         .current()
         .list_repos_for_authenticated_user()
         .send()
         .await;
-    let _ = match repos {
+
+    let repos = match repos {
         Ok(repos) => repos,
         Err(err) => {
             res.send(Response::Log(err.to_string()));
@@ -55,8 +57,11 @@ pub async fn run<T: Responder>(req: Request, res: T) {
     };
 
     // res.send(Response::Out(format!("{:#?}", repos)))
-
-    // repos.items.into_iter().
+    let repo_ids = repos
+        .items
+        .into_iter()
+        .map(|repo| repo.id)
+        .collect::<Vec<_>>();
 
     // let _ = octocrab
     //     .commits("karlhepler", "disfunction")
