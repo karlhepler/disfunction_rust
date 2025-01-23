@@ -160,6 +160,7 @@ name = "disfunction"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "futures",
  "octocrab",
  "tokio",
 ]

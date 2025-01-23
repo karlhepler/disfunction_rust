@@ -9,8 +9,8 @@ impl RequestBuilder for Request {
     fn build(token: &str) -> Option<Request> {
         Some(Request {
             token: token.to_string(),
-            since: NaiveDate::from_ymd_opt(2025, 1, 1)?,
-            until: Utc::now().date_naive(),
+            since: Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap(),
+            until: Utc::now(),
         })
     }
 }

@@ -10,6 +10,18 @@ impl Tty {
 
 use disfunction::{Responder, Response};
 impl Responder for Tty {
+    fn out(&self, s: String) {
+        self.send(Response::Out(s))
+    }
+
+    fn log(&self, s: String) {
+        self.send(Response::Log(s))
+    }
+
+    fn err(&self, s: String) {
+        self.send(Response::Err(s))
+    }
+
     fn send(&self, res: Response) {
         use disfunction::Response::*;
         match res {

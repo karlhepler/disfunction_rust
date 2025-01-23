@@ -1,11 +1,16 @@
 use chrono::prelude::*;
+use futures::{
+    future,
+    stream::{self, StreamExt},
+};
+use std::sync::Arc;
 // use octocrab::{commits::CommitHandler, models::repos::RepoCommit, Error as OctocrabError};
 
 #[derive(Debug)]
 pub struct Request {
     pub token: String,
-    pub since: NaiveDate,
-    pub until: NaiveDate,
+    pub since: DateTime<Utc>,
+    pub until: DateTime<Utc>,
 }
 
 #[derive(Debug)]
@@ -21,19 +26,20 @@ pub enum Response {
 
 pub trait Responder {
     fn send(&self, res: Response);
+    fn out(&self, msg: String);
+    fn err(&self, msg: String);
+    fn log(&self, msg: String);
 }
 
-pub async fn run<T: Responder>(req: Request, res: T) {
-    res.send(Response::Out(format!("Hello, world! {:#?}", req)));
+pub async fn run<T: Responder>(req: Request, res: Arc<T>) {
+    res.out(format!("Hello, world! {:#?}", req));
 
     let octocrab = octocrab::instance().user_access_token(req.token);
     let octocrab = match octocrab {
-        Ok(octocrab) => octocrab,
+        Ok(octocrab) => Arc::new(octocrab),
         Err(err) => {
-            res.send(Response::Log(err.to_string()));
-            res.send(Response::Err(
-                "error initializing GitHub client".to_string(),
-            ));
+            res.log(format!("{:#?}", err));
+            res.err("error initializing GitHub client".to_string());
             return;
         }
     };
@@ -48,25 +54,38 @@ pub async fn run<T: Responder>(req: Request, res: T) {
     let repos = match repos {
         Ok(repos) => repos,
         Err(err) => {
-            res.send(Response::Log(err.to_string()));
-            res.send(Response::Err(
-                "error listing repos for authenticated user".to_string(),
-            ));
+            res.log(format!("{:#?}", err));
+            res.err("error listing repos for authenticated user".to_string());
             return;
         }
     };
 
-    // res.send(Response::Out(format!("{:#?}", repos)))
-    let repo_ids = repos
-        .items
-        .into_iter()
-        .map(|repo| repo.id)
-        .collect::<Vec<_>>();
+    let commits = stream::iter(repos.items)
+        .map(|repo| (repo, Arc::clone(&octocrab), Arc::clone(&res)))
+        .then(|(repo, octocrab, res)| async move {
+            let commits = octocrab
+                .repos_by_id(repo.id)
+                .list_commits()
+                .since(req.since)
+                .until(req.until)
+                .send()
+                .await;
 
-    // let _ = octocrab
-    //     .commits("karlhepler", "disfunction")
-    //     .list(req.since, req.until)
-    //     .collect();
+            match commits {
+                Ok(commits) => Some(commits),
+                Err(err) => {
+                    res.log(format!("{:#?}", err));
+                    res.err("error getting commit".to_string());
+                    None
+                }
+            }
+        })
+        .filter(|opt| future::ready(opt.is_some()))
+        .flat_map(|opt| stream::iter(opt.unwrap()))
+        .collect::<Vec<_>>()
+        .await;
+
+    res.out(format!("{:#?}", commits));
 }
 
 // trait ListCommits<'octo> {
