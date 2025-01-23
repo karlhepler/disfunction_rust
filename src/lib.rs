@@ -40,6 +40,10 @@ pub async fn run<T: Responder>(req: Request, res: Arc<T>) {
     };
 
     // TODO(kjh): async pagination with smart rate limiting
+    //
+    // Reference:
+    //  https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28
+    //  https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28
     let repos = octocrab
         .current()
         .list_repos_for_authenticated_user()
@@ -82,13 +86,3 @@ pub async fn run<T: Responder>(req: Request, res: Arc<T>) {
 
     res.out(format!("{:#?}", commits));
 }
-
-// trait ListCommits<'octo> {
-//     async fn list(&self) -> Result<Vec<RepoCommit>, OctocrabError>;
-// }
-
-// impl<'octo> ListCommits<'_> for CommitHandler<'octo> {
-//     async fn list(&self) -> Result<Vec<RepoCommit>, Error> {
-//         todo!()
-//     }
-// }
