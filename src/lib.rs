@@ -61,6 +61,8 @@ pub async fn run<T: Responder>(req: Request, res: Arc<T>) {
 
     let commits = stream::iter(repos.items)
         .map(|repo| (repo, Arc::clone(&octocrab), Arc::clone(&res)))
+        // maybe use some sort of iterator caching mechanism
+        // .cache_or(fn)
         .then(|(repo, octocrab, res)| async move {
             let commits = octocrab
                 .repos_by_id(repo.id)
@@ -82,7 +84,8 @@ pub async fn run<T: Responder>(req: Request, res: Arc<T>) {
         .filter(|opt| future::ready(opt.is_some()))
         .flat_map(|opt| stream::iter(opt.unwrap()))
         .collect::<Vec<_>>()
-        .await;
+        .await; // now I need to get one random item from the list.
+                //.into_iter().????
 
     res.out(format!("{:#?}", commits));
 }
