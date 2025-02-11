@@ -1,15 +1,16 @@
-pub struct Tty {
+use disfunction::{Responder, Response};
+
+pub struct Term {
     //
 }
 
-impl Tty {
+impl Term {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-use disfunction::{Responder, Response};
-impl Responder for Tty {
+impl Responder for Term {
     fn out(&self, s: String) {
         self.send(Response::Out(s))
     }
