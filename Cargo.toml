@@ -7,4 +7,5 @@ edition = "2021"
 chrono = "0.4.39"
 futures = "0.3.31"
 octocrab = "0.43.0"
+queue = "0.3.1"
 tokio = {version = "1.0.0", features = ["full"]}
